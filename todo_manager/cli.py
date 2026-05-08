@@ -84,6 +84,11 @@ def cmd_export(a, m):
     path = export_csv(m, a.output) if a.format == "csv" else export_markdown(m, a.output)
     print(f"\n{GREEN}✔ Exported to:{RESET} {path}")
 
+def cmd_tui(a, m):
+    from .tui import launch
+
+    launch()
+
 def main():
     p = argparse.ArgumentParser(prog="todo", description="📝 Todo Manager")
     s = p.add_subparsers(dest="command", metavar="<command>")
@@ -96,9 +101,10 @@ def main():
     ex = s.add_parser("export", help="Export tasks to file"); ex.add_argument("format", choices=["csv","markdown"]); ex.add_argument("--output", help="Output file path", default=None)
     s.add_parser("clear"); s.add_parser("stats")
     s.add_parser("check", help="Escalate priorities based on due dates")
+    s.add_parser("tui", help="Launch interactive terminal UI")
     args = p.parse_args()
     if not args.command: p.print_help(); sys.exit(0)
-    cmds = {"add":cmd_add,"list":cmd_list,"done":cmd_done,"status":cmd_status,"update":cmd_update,"delete":cmd_delete,"clear":cmd_clear,"stats":cmd_stats,"export":cmd_export,"check":cmd_check}
+    cmds = {"add":cmd_add,"list":cmd_list,"done":cmd_done,"status":cmd_status,"update":cmd_update,"delete":cmd_delete,"clear":cmd_clear,"stats":cmd_stats,"export":cmd_export,"check":cmd_check,"tui":cmd_tui}
     try: cmds[args.command](args, TodoManager())
     except ValueError as e: print(f"\n{RED}Error:{RESET} {e}"); sys.exit(1)
 
