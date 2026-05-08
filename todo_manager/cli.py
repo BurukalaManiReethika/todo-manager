@@ -24,16 +24,18 @@ def _fmt(task):
         else:
             due = f"  {GRAY}due {task.due_date}{RESET}"
     desc = f"\n      {GRAY}{task.description}{RESET}" if task.description else ""
-    return f"  {sc}{icon}{RESET} {BOLD}[{task.id}]{RESET} {task.title}  {pc}[{task.priority.value}]{RESET}{due}{desc}"
+    tags_str = f"  {CYAN}#{' #'.join(task.tags)}{RESET}" if task.tags else ""
+    recurrence = f"  {CYAN}↻ {task.recurrence}{RESET}" if task.recurrence else ""
+    return f"  {sc}{icon}{RESET} {BOLD}[{task.id}]{RESET} {task.title}  {pc}[{task.priority.value}]{RESET}{tags_str}{recurrence}{due}{desc}"
 
 def _header(t): print(f"\n{CYAN}{BOLD}{t}{RESET}\n{CYAN}{'─'*len(t)}{RESET}")
 
 def cmd_add(a, m):
-    t = m.add_task(a.title, a.description or "", a.priority, a.due)
+    t = m.add_task(a.title, a.description or "", a.priority, a.due, tags=a.tags, recurrence=a.recur)
     print(f"\n{GREEN}✔ Task added!{RESET}"); print(_fmt(t))
 
 def cmd_list(a, m):
-    tasks = m.get_all()
+    tasks = m.get_by_tag(a.tag) if a.tag else m.get_all()
     if a.status:   tasks = [t for t in tasks if t.status.value == a.status]
     if a.priority: tasks = [t for t in tasks if t.priority.value == a.priority]
     if a.search:
@@ -44,7 +46,12 @@ def cmd_list(a, m):
     for t in tasks: print(_fmt(t))
     print()
 
-def cmd_done(a, m):   t = m.complete_task(a.id); print(f"\n{GREEN}✔ Done:{RESET} {t.title}")
+def cmd_done(a, m):
+    result = m.complete_task(a.id)
+    task, next_due = result if isinstance(result, tuple) else (result, None)
+    print(f"\n{GREEN}✔ Done:{RESET} {task.title}")
+    if next_due:
+        print(f"{CYAN}↻ Next occurrence scheduled: {next_due}{RESET}")
 def cmd_status(a, m): t = m.set_status(a.id, a.status); print(f"\n{GREEN}✔ Updated:{RESET} {t.title} → {t.status.value}")
 def cmd_update(a, m):
     kw = {k: v for k, v in [("title",a.title),("description",a.description),("priority",a.priority),("due_date",a.due)] if v}
@@ -60,19 +67,26 @@ def cmd_stats(a, m):
     for k,v in s["by_priority"].items(): print(f"    {PRIORITY_COLOR.get(k,RESET)}■ {k:<14}{RESET}{v}")
     print()
 
+def cmd_export(a, m):
+    from .exporter import export_csv, export_markdown
+
+    path = export_csv(m, a.output) if a.format == "csv" else export_markdown(m, a.output)
+    print(f"\n{GREEN}✔ Exported to:{RESET} {path}")
+
 def main():
     p = argparse.ArgumentParser(prog="todo", description="📝 Todo Manager")
     s = p.add_subparsers(dest="command", metavar="<command>")
-    a = s.add_parser("add");    a.add_argument("title"); a.add_argument("-d","--description",default=""); a.add_argument("-p","--priority",choices=["low","medium","high"],default="medium"); a.add_argument("--due",default=None)
-    l = s.add_parser("list");   l.add_argument("-s","--status",choices=["pending","in_progress","done"]); l.add_argument("-p","--priority",choices=["low","medium","high"]); l.add_argument("-q","--search")
+    a = s.add_parser("add");    a.add_argument("title"); a.add_argument("-d","--description",default=""); a.add_argument("-p","--priority",choices=["low","medium","high"],default="medium"); a.add_argument("--due",default=None); a.add_argument("--recur", choices=["daily", "weekly", "monthly"], default=None); a.add_argument("--tags", nargs="+", help="Tags e.g. --tags work urgent")
+    l = s.add_parser("list");   l.add_argument("-s","--status",choices=["pending","in_progress","done"]); l.add_argument("-p","--priority",choices=["low","medium","high"]); l.add_argument("-q","--search"); l.add_argument("--tag", help="Filter by tag")
     d = s.add_parser("done");   d.add_argument("id")
     st = s.add_parser("status");st.add_argument("id"); st.add_argument("status",choices=["pending","in_progress","done"])
     u = s.add_parser("update"); u.add_argument("id"); u.add_argument("--title"); u.add_argument("-d","--description"); u.add_argument("-p","--priority",choices=["low","medium","high"]); u.add_argument("--due")
     dl = s.add_parser("delete");dl.add_argument("id")
+    ex = s.add_parser("export", help="Export tasks to file"); ex.add_argument("format", choices=["csv","markdown"]); ex.add_argument("--output", help="Output file path", default=None)
     s.add_parser("clear"); s.add_parser("stats")
     args = p.parse_args()
     if not args.command: p.print_help(); sys.exit(0)
-    cmds = {"add":cmd_add,"list":cmd_list,"done":cmd_done,"status":cmd_status,"update":cmd_update,"delete":cmd_delete,"clear":cmd_clear,"stats":cmd_stats}
+    cmds = {"add":cmd_add,"list":cmd_list,"done":cmd_done,"status":cmd_status,"update":cmd_update,"delete":cmd_delete,"clear":cmd_clear,"stats":cmd_stats,"export":cmd_export}
     try: cmds[args.command](args, TodoManager())
     except ValueError as e: print(f"\n{RED}Error:{RESET} {e}"); sys.exit(1)
 
