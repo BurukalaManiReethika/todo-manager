@@ -59,6 +59,17 @@ def cmd_update(a, m):
     print(f"\n{GREEN}✔ Updated:{RESET}"); print(_fmt(m.update_task(a.id, **kw)))
 def cmd_delete(a, m): t = m.delete_task(a.id); print(f"\n{RED}✖ Deleted:{RESET} {t.title}")
 def cmd_clear(a, m):  n = m.clear_done(); print(f"\n{GREEN}✔ Cleared {n} task(s).{RESET}")
+
+def cmd_check(a, m):
+    escalated = m.escalate_priorities()
+    if not escalated:
+        print(f"\n{GREEN}✔ All priorities are up to date.{RESET}")
+        return
+
+    print(f"\n{YELLOW}⚡ Escalated {len(escalated)} task(s):{RESET}")
+    for task, old_priority in escalated:
+        print(f"  {task.title}  {GRAY}{old_priority.value}{RESET} → {RED}{task.priority.value}{RESET}")
+
 def cmd_stats(a, m):
     s = m.stats(); _header("Statistics")
     print(f"  Total: {BOLD}{s['total']}{RESET}\n\n  By Status:")
@@ -84,9 +95,10 @@ def main():
     dl = s.add_parser("delete");dl.add_argument("id")
     ex = s.add_parser("export", help="Export tasks to file"); ex.add_argument("format", choices=["csv","markdown"]); ex.add_argument("--output", help="Output file path", default=None)
     s.add_parser("clear"); s.add_parser("stats")
+    s.add_parser("check", help="Escalate priorities based on due dates")
     args = p.parse_args()
     if not args.command: p.print_help(); sys.exit(0)
-    cmds = {"add":cmd_add,"list":cmd_list,"done":cmd_done,"status":cmd_status,"update":cmd_update,"delete":cmd_delete,"clear":cmd_clear,"stats":cmd_stats,"export":cmd_export}
+    cmds = {"add":cmd_add,"list":cmd_list,"done":cmd_done,"status":cmd_status,"update":cmd_update,"delete":cmd_delete,"clear":cmd_clear,"stats":cmd_stats,"export":cmd_export,"check":cmd_check}
     try: cmds[args.command](args, TodoManager())
     except ValueError as e: print(f"\n{RED}Error:{RESET} {e}"); sys.exit(1)
 

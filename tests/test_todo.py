@@ -121,3 +121,61 @@ def test_task_recurrence_persistence(tmp_path):
     reloaded = TodoManager(storage).get_by_id(task.id)
 
     assert reloaded.recurrence == "monthly"
+
+
+def test_escalate_priorities_updates_active_tasks_near_due_dates(mgr):
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    three_days = (date.today() + timedelta(days=3)).isoformat()
+    later = (date.today() + timedelta(days=4)).isoformat()
+
+    urgent = mgr.add_task("Urgent report", priority="low", due_date=tomorrow)
+    soon = mgr.add_task("Soon task", priority="low", due_date=three_days)
+    already_medium = mgr.add_task("Medium task", priority="medium", due_date=three_days)
+    later_task = mgr.add_task("Later task", priority="low", due_date=later)
+    no_due = mgr.add_task("No due date", priority="low")
+    done = mgr.add_task("Done task", priority="low", due_date=tomorrow)
+    mgr.complete_task(done.id)
+
+    escalated = mgr.escalate_priorities()
+
+    assert escalated == [(urgent, Priority.LOW), (soon, Priority.LOW)]
+    assert urgent.priority == Priority.HIGH
+    assert soon.priority == Priority.MEDIUM
+    assert already_medium.priority == Priority.MEDIUM
+    assert later_task.priority == Priority.LOW
+    assert no_due.priority == Priority.LOW
+    assert done.priority == Priority.LOW
+
+
+def test_escalate_priorities_persists_changes(tmp_path):
+    storage = Storage(str(tmp_path / "tasks.json"))
+    mgr = TodoManager(storage=storage)
+    task = mgr.add_task(
+        "Urgent report",
+        priority="low",
+        due_date=(date.today() + timedelta(days=1)).isoformat(),
+    )
+
+    assert mgr.escalate_priorities() == [(task, Priority.LOW)]
+
+    reloaded = TodoManager(storage=storage).get_by_id(task.id)
+    assert reloaded.priority == Priority.HIGH
+
+
+def test_cmd_check_reports_escalated_tasks(mgr, capsys):
+    from argparse import Namespace
+    from todo_manager.cli import cmd_check
+
+    mgr.add_task(
+        "Urgent report",
+        priority="low",
+        due_date=(date.today() + timedelta(days=1)).isoformat(),
+    )
+
+    cmd_check(Namespace(), mgr)
+
+    output = capsys.readouterr().out
+    assert "Escalated 1 task(s)" in output
+    assert "Urgent report" in output
+    assert "low" in output
+    assert "high" in output
