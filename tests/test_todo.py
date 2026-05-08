@@ -51,3 +51,35 @@ def test_tags_filter_and_persistence(tmp_path):
 
     reloaded = TodoManager(storage=storage)
     assert reloaded.get_by_tag("meetings")[0].tags == ["work", "meetings"]
+
+
+def test_export_csv(mgr, tmp_path):
+    from todo_manager.exporter import export_csv
+
+    task = mgr.add_task("Export me", "Details", priority="high", due_date="2026-05-09")
+    output = tmp_path / "tasks.csv"
+
+    path = export_csv(mgr, str(output))
+
+    assert path == str(output)
+    assert output.read_text(encoding="utf-8").splitlines() == [
+        "id,title,description,priority,status,created_at,due_date",
+        f"{task.id},Export me,Details,high,pending,{task.created_at},2026-05-09",
+    ]
+
+
+def test_export_markdown(mgr, tmp_path):
+    from todo_manager.exporter import export_markdown
+
+    task = mgr.add_task("Export me", priority="low")
+    output = tmp_path / "tasks.md"
+
+    path = export_markdown(mgr, str(output))
+
+    assert path == str(output)
+    assert output.read_text(encoding="utf-8") == "\n".join([
+        "# Task Export\n",
+        "| ID | Title | Priority | Status | Due Date |",
+        "|---|---|---|---|---|",
+        f"| {task.id} | Export me | low | pending | — |",
+    ])
