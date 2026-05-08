@@ -1,3 +1,5 @@
+from datetime import date
+
 from .task import Priority, Status, Task
 from .storage import Storage
 
@@ -18,6 +20,21 @@ class TodoManager:
     def get_by_id(self, task_id): return next((t for t in self.tasks if t.id == task_id), None)
     def get_by_status(self, status): return [t for t in self.tasks if t.status == Status(status)]
     def get_by_priority(self, priority): return [t for t in self.tasks if t.priority == Priority(priority)]
+
+    def get_overdue(self):
+        today = date.today().isoformat()
+        return [
+            t for t in self.tasks
+            if t.due_date and t.due_date < today and t.status != Status.DONE
+        ]
+
+    def get_due_today(self):
+        today = date.today().isoformat()
+        return [
+            t for t in self.tasks
+            if t.due_date == today and t.status != Status.DONE
+        ]
+
     def search(self, keyword):
         kw = keyword.lower()
         return [t for t in self.tasks if kw in t.title.lower() or kw in t.description.lower()]

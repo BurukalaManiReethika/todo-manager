@@ -1,4 +1,5 @@
 import argparse, sys
+from datetime import date
 from .manager import TodoManager
 from .task import Status, Priority
 
@@ -13,7 +14,15 @@ def _fmt(task):
     sc = STATUS_COLOR.get(task.status.value, RESET)
     pc = PRIORITY_COLOR.get(task.priority.value, RESET)
     icon = STATUS_ICON.get(task.status.value, "?")
-    due = f"  {GRAY}due {task.due_date}{RESET}" if task.due_date else ""
+    due = ""
+    if task.due_date:
+        today = date.today().isoformat()
+        if task.due_date < today:
+            due = f"  {RED}⚠ OVERDUE {task.due_date}{RESET}"
+        elif task.due_date == today:
+            due = f"  {YELLOW}⏰ DUE TODAY{RESET}"
+        else:
+            due = f"  {GRAY}due {task.due_date}{RESET}"
     desc = f"\n      {GRAY}{task.description}{RESET}" if task.description else ""
     return f"  {sc}{icon}{RESET} {BOLD}[{task.id}]{RESET} {task.title}  {pc}[{task.priority.value}]{RESET}{due}{desc}"
 
