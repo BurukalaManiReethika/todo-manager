@@ -23,6 +23,7 @@ class Task:
         self.due_date = due_date
         self.tags = tags if tags else []
         self.recurrence = recurrence
+        self.notes = []
 
     def to_dict(self):
         return {
@@ -30,6 +31,7 @@ class Task:
             "priority": self.priority.value, "status": self.status.value,
             "created_at": self.created_at, "due_date": self.due_date,
             "tags": self.tags, "recurrence": self.recurrence,
+            "notes": self.notes,
         }
 
     @classmethod
@@ -40,4 +42,5 @@ class Task:
         task.id = data["id"]
         task.status = Status(data.get("status", "pending"))
         task.created_at = data.get("created_at", datetime.now().strftime("%Y-%m-%d %H:%M"))
+        task.notes = data.get("notes", [])
         return task
