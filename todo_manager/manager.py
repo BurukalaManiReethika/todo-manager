@@ -89,6 +89,38 @@ class TodoManager:
             raise ValueError(f"Unsupported recurrence '{recurrence}'.")
         return d.isoformat()
 
+    def escalate_priorities(self) -> list:
+        """
+        Escalate priorities for active tasks with nearby due dates.
+
+        - Due within 1 day escalates to high.
+        - Due within 3 days escalates low-priority tasks to medium.
+
+        Returns a list of ``(task, old_priority)`` tuples for tasks that changed.
+        """
+        today = date.today()
+        escalated = []
+
+        for task in self.tasks:
+            if task.status == Status.DONE or not task.due_date:
+                continue
+
+            due = date.fromisoformat(task.due_date)
+            days = (due - today).days
+
+            old_priority = task.priority
+            if days <= 1 and task.priority != Priority.HIGH:
+                task.priority = Priority.HIGH
+            elif days <= 3 and task.priority == Priority.LOW:
+                task.priority = Priority.MEDIUM
+
+            if task.priority != old_priority:
+                escalated.append((task, old_priority))
+
+        if escalated:
+            self._save()
+        return escalated
+
     def delete_task(self, task_id):
         task = self._get_or_raise(task_id)
         self.tasks.remove(task)
