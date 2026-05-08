@@ -8,10 +8,10 @@ class TodoManager:
         self.storage = storage or Storage()
         self.tasks = self.storage.load()
 
-    def add_task(self, title, description="", priority="medium", due_date=None):
+    def add_task(self, title, description="", priority="medium", due_date=None, tags=None):
         if not title.strip():
             raise ValueError("Task title cannot be empty.")
-        task = Task(title.strip(), description.strip(), Priority(priority.lower()), due_date)
+        task = Task(title.strip(), description.strip(), Priority(priority.lower()), due_date, tags=tags or [])
         self.tasks.append(task)
         self._save()
         return task
@@ -20,6 +20,7 @@ class TodoManager:
     def get_by_id(self, task_id): return next((t for t in self.tasks if t.id == task_id), None)
     def get_by_status(self, status): return [t for t in self.tasks if t.status == Status(status)]
     def get_by_priority(self, priority): return [t for t in self.tasks if t.priority == Priority(priority)]
+    def get_by_tag(self, tag: str): return [t for t in self.tasks if tag.lower() in [tg.lower() for tg in t.tags]]
 
     def get_overdue(self):
         today = date.today().isoformat()

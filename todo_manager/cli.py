@@ -24,16 +24,17 @@ def _fmt(task):
         else:
             due = f"  {GRAY}due {task.due_date}{RESET}"
     desc = f"\n      {GRAY}{task.description}{RESET}" if task.description else ""
-    return f"  {sc}{icon}{RESET} {BOLD}[{task.id}]{RESET} {task.title}  {pc}[{task.priority.value}]{RESET}{due}{desc}"
+    tags_str = f"  {CYAN}#{' #'.join(task.tags)}{RESET}" if task.tags else ""
+    return f"  {sc}{icon}{RESET} {BOLD}[{task.id}]{RESET} {task.title}  {pc}[{task.priority.value}]{RESET}{tags_str}{due}{desc}"
 
 def _header(t): print(f"\n{CYAN}{BOLD}{t}{RESET}\n{CYAN}{'─'*len(t)}{RESET}")
 
 def cmd_add(a, m):
-    t = m.add_task(a.title, a.description or "", a.priority, a.due)
+    t = m.add_task(a.title, a.description or "", a.priority, a.due, tags=a.tags)
     print(f"\n{GREEN}✔ Task added!{RESET}"); print(_fmt(t))
 
 def cmd_list(a, m):
-    tasks = m.get_all()
+    tasks = m.get_by_tag(a.tag) if a.tag else m.get_all()
     if a.status:   tasks = [t for t in tasks if t.status.value == a.status]
     if a.priority: tasks = [t for t in tasks if t.priority.value == a.priority]
     if a.search:
@@ -63,8 +64,8 @@ def cmd_stats(a, m):
 def main():
     p = argparse.ArgumentParser(prog="todo", description="📝 Todo Manager")
     s = p.add_subparsers(dest="command", metavar="<command>")
-    a = s.add_parser("add");    a.add_argument("title"); a.add_argument("-d","--description",default=""); a.add_argument("-p","--priority",choices=["low","medium","high"],default="medium"); a.add_argument("--due",default=None)
-    l = s.add_parser("list");   l.add_argument("-s","--status",choices=["pending","in_progress","done"]); l.add_argument("-p","--priority",choices=["low","medium","high"]); l.add_argument("-q","--search")
+    a = s.add_parser("add");    a.add_argument("title"); a.add_argument("-d","--description",default=""); a.add_argument("-p","--priority",choices=["low","medium","high"],default="medium"); a.add_argument("--due",default=None); a.add_argument("--tags", nargs="+", help="Tags e.g. --tags work urgent")
+    l = s.add_parser("list");   l.add_argument("-s","--status",choices=["pending","in_progress","done"]); l.add_argument("-p","--priority",choices=["low","medium","high"]); l.add_argument("-q","--search"); l.add_argument("--tag", help="Filter by tag")
     d = s.add_parser("done");   d.add_argument("id")
     st = s.add_parser("status");st.add_argument("id"); st.add_argument("status",choices=["pending","in_progress","done"])
     u = s.add_parser("update"); u.add_argument("id"); u.add_argument("--title"); u.add_argument("-d","--description"); u.add_argument("-p","--priority",choices=["low","medium","high"]); u.add_argument("--due")
