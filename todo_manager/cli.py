@@ -25,12 +25,13 @@ def _fmt(task):
             due = f"  {GRAY}due {task.due_date}{RESET}"
     desc = f"\n      {GRAY}{task.description}{RESET}" if task.description else ""
     tags_str = f"  {CYAN}#{' #'.join(task.tags)}{RESET}" if task.tags else ""
-    return f"  {sc}{icon}{RESET} {BOLD}[{task.id}]{RESET} {task.title}  {pc}[{task.priority.value}]{RESET}{tags_str}{due}{desc}"
+    recurrence = f"  {CYAN}↻ {task.recurrence}{RESET}" if task.recurrence else ""
+    return f"  {sc}{icon}{RESET} {BOLD}[{task.id}]{RESET} {task.title}  {pc}[{task.priority.value}]{RESET}{tags_str}{recurrence}{due}{desc}"
 
 def _header(t): print(f"\n{CYAN}{BOLD}{t}{RESET}\n{CYAN}{'─'*len(t)}{RESET}")
 
 def cmd_add(a, m):
-    t = m.add_task(a.title, a.description or "", a.priority, a.due, tags=a.tags)
+    t = m.add_task(a.title, a.description or "", a.priority, a.due, tags=a.tags, recurrence=a.recur)
     print(f"\n{GREEN}✔ Task added!{RESET}"); print(_fmt(t))
 
 def cmd_list(a, m):
@@ -45,7 +46,12 @@ def cmd_list(a, m):
     for t in tasks: print(_fmt(t))
     print()
 
-def cmd_done(a, m):   t = m.complete_task(a.id); print(f"\n{GREEN}✔ Done:{RESET} {t.title}")
+def cmd_done(a, m):
+    result = m.complete_task(a.id)
+    task, next_due = result if isinstance(result, tuple) else (result, None)
+    print(f"\n{GREEN}✔ Done:{RESET} {task.title}")
+    if next_due:
+        print(f"{CYAN}↻ Next occurrence scheduled: {next_due}{RESET}")
 def cmd_status(a, m): t = m.set_status(a.id, a.status); print(f"\n{GREEN}✔ Updated:{RESET} {t.title} → {t.status.value}")
 def cmd_update(a, m):
     kw = {k: v for k, v in [("title",a.title),("description",a.description),("priority",a.priority),("due_date",a.due)] if v}
@@ -70,7 +76,7 @@ def cmd_export(a, m):
 def main():
     p = argparse.ArgumentParser(prog="todo", description="📝 Todo Manager")
     s = p.add_subparsers(dest="command", metavar="<command>")
-    a = s.add_parser("add");    a.add_argument("title"); a.add_argument("-d","--description",default=""); a.add_argument("-p","--priority",choices=["low","medium","high"],default="medium"); a.add_argument("--due",default=None); a.add_argument("--tags", nargs="+", help="Tags e.g. --tags work urgent")
+    a = s.add_parser("add");    a.add_argument("title"); a.add_argument("-d","--description",default=""); a.add_argument("-p","--priority",choices=["low","medium","high"],default="medium"); a.add_argument("--due",default=None); a.add_argument("--recur", choices=["daily", "weekly", "monthly"], default=None); a.add_argument("--tags", nargs="+", help="Tags e.g. --tags work urgent")
     l = s.add_parser("list");   l.add_argument("-s","--status",choices=["pending","in_progress","done"]); l.add_argument("-p","--priority",choices=["low","medium","high"]); l.add_argument("-q","--search"); l.add_argument("--tag", help="Filter by tag")
     d = s.add_parser("done");   d.add_argument("id")
     st = s.add_parser("status");st.add_argument("id"); st.add_argument("status",choices=["pending","in_progress","done"])

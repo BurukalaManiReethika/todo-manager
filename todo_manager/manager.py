@@ -1,4 +1,5 @@
-from datetime import date
+import calendar
+from datetime import date, timedelta
 
 from .task import Priority, Status, Task
 from .storage import Storage
@@ -8,10 +9,10 @@ class TodoManager:
         self.storage = storage or Storage()
         self.tasks = self.storage.load()
 
-    def add_task(self, title, description="", priority="medium", due_date=None, tags=None):
+    def add_task(self, title, description="", priority="medium", due_date=None, tags=None, recurrence=None):
         if not title.strip():
             raise ValueError("Task title cannot be empty.")
-        task = Task(title.strip(), description.strip(), Priority(priority.lower()), due_date, tags=tags or [])
+        task = Task(title.strip(), description.strip(), Priority(priority.lower()), due_date, tags=tags or [], recurrence=recurrence)
         self.tasks.append(task)
         self._save()
         return task
@@ -55,7 +56,38 @@ class TodoManager:
         self._save()
         return task
 
-    def complete_task(self, task_id): return self.set_status(task_id, "done")
+    def complete_task(self, task_id):
+        task = self._get_or_raise(task_id)
+        task.status = Status.DONE
+        self._save()
+
+        if task.recurrence and task.due_date:
+            next_due = self._next_due(task.due_date, task.recurrence)
+            self.add_task(
+                title=task.title,
+                description=task.description,
+                priority=task.priority.value,
+                due_date=next_due,
+                tags=task.tags,
+                recurrence=task.recurrence,
+            )
+            return task, next_due
+        return task, None
+
+    def _next_due(self, due_date, recurrence):
+        d = date.fromisoformat(due_date)
+        if recurrence == "daily":
+            d += timedelta(days=1)
+        elif recurrence == "weekly":
+            d += timedelta(weeks=1)
+        elif recurrence == "monthly":
+            month = d.month % 12 + 1
+            year = d.year + (d.month // 12)
+            day = min(d.day, calendar.monthrange(year, month)[1])
+            d = d.replace(year=year, month=month, day=day)
+        else:
+            raise ValueError(f"Unsupported recurrence '{recurrence}'.")
+        return d.isoformat()
 
     def delete_task(self, task_id):
         task = self._get_or_raise(task_id)
