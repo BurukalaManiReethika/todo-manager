@@ -179,3 +179,44 @@ def test_cmd_check_reports_escalated_tasks(mgr, capsys):
     assert "Urgent report" in output
     assert "low" in output
     assert "high" in output
+
+
+def test_storage_backup_and_restore(tmp_path):
+    storage = Storage(str(tmp_path / "tasks.json"))
+    original = Task("Original")
+    updated = Task("Updated")
+
+    storage.save([original])
+    storage.backup()
+    storage.save([updated])
+
+    assert storage.restore_backup() is True
+    assert [task.title for task in storage.load()] == ["Original"]
+
+
+def test_manager_undo_restores_previous_state(mgr):
+    task = mgr.add_task("Undo me")
+    mgr.delete_task(task.id)
+
+    assert mgr.get_all() == []
+    assert mgr.undo() is True
+    assert mgr.get_by_id(task.id).title == "Undo me"
+
+
+def test_manager_undo_returns_false_without_backup(mgr):
+    assert mgr.undo() is False
+
+
+def test_cmd_undo_reports_restored_task(mgr, capsys):
+    from argparse import Namespace
+    from todo_manager.cli import cmd_undo
+
+    task = mgr.add_task("Undo from CLI")
+    mgr.delete_task(task.id)
+
+    cmd_undo(Namespace(), mgr)
+
+    output = capsys.readouterr().out
+    assert "Last action undone" in output
+    assert "Current tasks: 1" in output
+    assert mgr.get_by_id(task.id).title == "Undo from CLI"
