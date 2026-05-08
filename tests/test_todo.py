@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 import pytest
 from todo_manager.task import Task, Priority, Status
 from todo_manager.storage import Storage
@@ -20,3 +22,19 @@ def test_stats(mgr):
     mgr.add_task("T"); s = mgr.stats(); assert s["total"] == 1
 def test_persistence(tmp_path):  
     s = Storage(str(tmp_path/"t.json")); TodoManager(s).add_task("X"); assert len(TodoManager(s).get_all()) == 1
+
+
+def test_due_date_filters(mgr):
+    yesterday = (date.today() - timedelta(days=1)).isoformat()
+    today = date.today().isoformat()
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+
+    overdue = mgr.add_task("Overdue", due_date=yesterday)
+    due_today = mgr.add_task("Due today", due_date=today)
+    future = mgr.add_task("Future", due_date=tomorrow)
+    done_overdue = mgr.add_task("Done overdue", due_date=yesterday)
+    mgr.complete_task(done_overdue.id)
+
+    assert mgr.get_overdue() == [overdue]
+    assert mgr.get_due_today() == [due_today]
+    assert future not in mgr.get_overdue()
