@@ -38,3 +38,16 @@ def test_due_date_filters(mgr):
     assert mgr.get_overdue() == [overdue]
     assert mgr.get_due_today() == [due_today]
     assert future not in mgr.get_overdue()
+
+
+def test_tags_filter_and_persistence(tmp_path):
+    storage = Storage(str(tmp_path / "tasks.json"))
+    mgr = TodoManager(storage=storage)
+    work = mgr.add_task("Team meeting", tags=["work", "meetings"])
+    mgr.add_task("Buy milk", tags=["personal"])
+
+    assert work.tags == ["work", "meetings"]
+    assert mgr.get_by_tag("WORK") == [work]
+
+    reloaded = TodoManager(storage=storage)
+    assert reloaded.get_by_tag("meetings")[0].tags == ["work", "meetings"]

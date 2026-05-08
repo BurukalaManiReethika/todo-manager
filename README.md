@@ -53,6 +53,7 @@ pip install -e .
 ```bash
 todo add "Deploy to production"
 todo add "Review PR #42" --priority high
+todo add "Team meeting" --tags work meetings
 todo add "Write docs" -d "Update API reference" --due 2024-12-31
 ```
 
@@ -61,6 +62,7 @@ todo add "Write docs" -d "Update API reference" --due 2024-12-31
 todo list                         # everything
 todo list --status pending        # only pending
 todo list --priority high         # only high priority
+todo list --tag work               # only tasks tagged work
 todo list --search "deploy"       # search by keyword
 ```
 
@@ -113,11 +115,12 @@ from todo_manager import TodoManager
 mgr = TodoManager()
 
 # Create
-task = mgr.add_task("Ship feature X", priority="high", due_date="2024-12-01")
+task = mgr.add_task("Ship feature X", priority="high", due_date="2024-12-01", tags=["work", "urgent"])
 
 # Read
 all_tasks   = mgr.get_all()
 high_prio   = mgr.get_by_priority("high")
+work_tasks  = mgr.get_by_tag("work")
 in_progress = mgr.get_by_status("in_progress")
 results     = mgr.search("feature")
 
@@ -188,7 +191,8 @@ Tasks are saved to `tasks.json` in your working directory. No database, no serve
     "priority": "high",
     "status": "pending",
     "created_at": "2024-11-20 09:00",
-    "due_date": "2024-12-01"
+    "due_date": "2024-12-01",
+    "tags": ["work", "urgent"]
   }
 ]
 ```
