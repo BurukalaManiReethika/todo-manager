@@ -1,5 +1,5 @@
 import calendar
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from .task import Priority, Status, Task
 from .storage import Storage
@@ -40,6 +40,16 @@ class TodoManager:
     def search(self, keyword):
         kw = keyword.lower()
         return [t for t in self.tasks if kw in t.title.lower() or kw in t.description.lower()]
+
+    def add_note(self, task_id: str, text: str):
+        task = self._get_or_raise(task_id)
+        note = {"text": text.strip(), "at": datetime.now().strftime("%Y-%m-%d %H:%M")}
+        task.notes.append(note)
+        self._save()
+        return note
+
+    def get_notes(self, task_id: str):
+        return self._get_or_raise(task_id).notes
 
     def update_task(self, task_id, **kwargs):
         task = self._get_or_raise(task_id)

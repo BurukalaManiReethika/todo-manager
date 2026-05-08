@@ -60,6 +60,20 @@ def cmd_update(a, m):
 def cmd_delete(a, m): t = m.delete_task(a.id); print(f"\n{RED}✖ Deleted:{RESET} {t.title}")
 def cmd_clear(a, m):  n = m.clear_done(); print(f"\n{GREEN}✔ Cleared {n} task(s).{RESET}")
 
+def cmd_note(a, m):
+    note = m.add_note(a.id, a.text)
+    print(f"\n{GREEN}✔ Note added at {note['at']}{RESET}")
+
+def cmd_log(a, m):
+    task = m.get_by_id(a.id)
+    notes = m.get_notes(a.id)
+    _header(f"Notes for: {task.title}")
+    if not notes:
+        print(f"  {GRAY}No notes yet.{RESET}\n"); return
+    for n in notes:
+        print(f"  {GRAY}{n['at']}{RESET}  {n['text']}")
+    print()
+
 def cmd_undo(a, m):
     if m.undo():
         print(f"\n{GREEN}✔ Last action undone.{RESET}")
@@ -105,6 +119,8 @@ def main():
     st = s.add_parser("status");st.add_argument("id"); st.add_argument("status",choices=["pending","in_progress","done"])
     u = s.add_parser("update"); u.add_argument("id"); u.add_argument("--title"); u.add_argument("-d","--description"); u.add_argument("-p","--priority",choices=["low","medium","high"]); u.add_argument("--due")
     dl = s.add_parser("delete");dl.add_argument("id")
+    n = s.add_parser("note", help="Add a note to a task"); n.add_argument("id"); n.add_argument("text")
+    lg = s.add_parser("log", help="View notes history for a task"); lg.add_argument("id")
     ex = s.add_parser("export", help="Export tasks to file"); ex.add_argument("format", choices=["csv","markdown"]); ex.add_argument("--output", help="Output file path", default=None)
     s.add_parser("clear"); s.add_parser("stats")
     s.add_parser("undo", help="Undo the last action")
@@ -112,7 +128,7 @@ def main():
     s.add_parser("tui", help="Launch interactive terminal UI")
     args = p.parse_args()
     if not args.command: p.print_help(); sys.exit(0)
-    cmds = {"add":cmd_add,"list":cmd_list,"done":cmd_done,"status":cmd_status,"update":cmd_update,"delete":cmd_delete,"clear":cmd_clear,"stats":cmd_stats,"undo":cmd_undo,"export":cmd_export,"check":cmd_check,"tui":cmd_tui}
+    cmds = {"add":cmd_add,"list":cmd_list,"done":cmd_done,"status":cmd_status,"update":cmd_update,"delete":cmd_delete,"clear":cmd_clear,"note":cmd_note,"log":cmd_log,"stats":cmd_stats,"undo":cmd_undo,"export":cmd_export,"check":cmd_check,"tui":cmd_tui}
     try: cmds[args.command](args, TodoManager())
     except ValueError as e: print(f"\n{RED}Error:{RESET} {e}"); sys.exit(1)
 

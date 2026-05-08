@@ -220,3 +220,60 @@ def test_cmd_undo_reports_restored_task(mgr, capsys):
     assert "Last action undone" in output
     assert "Current tasks: 1" in output
     assert mgr.get_by_id(task.id).title == "Undo from CLI"
+
+
+def test_task_notes_persist(tmp_path):
+    storage = Storage(str(tmp_path / "tasks.json"))
+    mgr = TodoManager(storage=storage)
+    task = mgr.add_task("Call client")
+
+    note = mgr.add_note(task.id, " Waiting for client approval ")
+
+    assert note["text"] == "Waiting for client approval"
+    assert task.notes == [note]
+    reloaded = TodoManager(storage=storage).get_by_id(task.id)
+    assert reloaded.notes == [note]
+
+
+def test_existing_tasks_default_to_empty_notes():
+    task = Task.from_dict({"id": "abc123", "title": "Legacy task"})
+
+    assert task.notes == []
+    assert task.to_dict()["notes"] == []
+
+
+def test_get_notes_raises_for_unknown_task(mgr):
+    with pytest.raises(ValueError):
+        mgr.get_notes("missing")
+
+
+def test_cmd_note_reports_timestamp(mgr, capsys):
+    from argparse import Namespace
+    from todo_manager.cli import cmd_note
+
+    task = mgr.add_task("Call client")
+
+    cmd_note(Namespace(id=task.id, text="Client approved, starting now"), mgr)
+
+    output = capsys.readouterr().out
+    assert "Note added at" in output
+    assert mgr.get_notes(task.id)[0]["text"] == "Client approved, starting now"
+
+
+def test_cmd_log_reports_notes_and_empty_state(mgr, capsys):
+    from argparse import Namespace
+    from todo_manager.cli import cmd_log
+
+    task = mgr.add_task("Call client")
+
+    cmd_log(Namespace(id=task.id), mgr)
+    empty_output = capsys.readouterr().out
+    assert "Notes for: Call client" in empty_output
+    assert "No notes yet." in empty_output
+
+    note = mgr.add_note(task.id, "Waiting for client approval")
+    cmd_log(Namespace(id=task.id), mgr)
+    output = capsys.readouterr().out
+    assert "Notes for: Call client" in output
+    assert note["at"] in output
+    assert "Waiting for client approval" in output
