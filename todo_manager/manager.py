@@ -140,9 +140,18 @@ class TodoManager:
             "by_priority": {p.value: sum(1 for t in self.tasks if t.priority == p) for p in Priority},
         }
 
+    def undo(self):
+        """Restore tasks to state before last mutation."""
+        if self.storage.restore_backup():
+            self.tasks = self.storage.load()
+            return True
+        return False
+
     def _get_or_raise(self, task_id):
         task = self.get_by_id(task_id)
         if not task: raise ValueError(f"No task found with id '{task_id}'.")
         return task
 
-    def _save(self): self.storage.save(self.tasks)
+    def _save(self):
+        self.storage.backup()
+        self.storage.save(self.tasks)

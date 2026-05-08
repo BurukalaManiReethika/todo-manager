@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from .task import Task
 
 class Storage:
@@ -18,3 +19,17 @@ class Storage:
     def save(self, tasks):
         with open(self.filepath, "w", encoding="utf-8") as f:
             json.dump([t.to_dict() for t in tasks], f, indent=2)
+
+    def backup(self):
+        """Save a backup of current tasks before any mutation."""
+        backup_path = self.filepath + ".bak"
+        if os.path.exists(self.filepath):
+            shutil.copy2(self.filepath, backup_path)
+
+    def restore_backup(self) -> bool:
+        """Restore from backup. Returns True if backup existed."""
+        backup_path = self.filepath + ".bak"
+        if os.path.exists(backup_path):
+            shutil.copy2(backup_path, self.filepath)
+            return True
+        return False
